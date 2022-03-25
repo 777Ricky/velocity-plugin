@@ -10,6 +10,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.PluginDescription;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
@@ -23,6 +24,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @Plugin(
@@ -72,7 +74,15 @@ public class AnalysePlugin {
 
     @Subscribe
     public void onLeave(DisconnectEvent event) {
-        this.redis.del("analyse:connected_via:" + event.getPlayer().getUsername());
+        Player player = event.getPlayer();
+
+        proxy.getScheduler()
+            .buildTask(this, () -> {
+                if(proxy.getPlayer(player.getUniqueId()).isPresent()) return;
+                this.redis.del("analyse:connected_via:" + player.getUsername());
+            })
+            .delay(10L, TimeUnit.SECONDS)
+            .schedule();
     }
 
     @Subscribe
