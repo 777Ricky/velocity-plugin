@@ -53,7 +53,6 @@ public class AnalysePlugin {
     public void onEnable(ProxyInitializeEvent event) {
         logger.info("Enabling Analyse v" + getDescription().getVersion().orElse("Unknown"));
 
-        // load configuration
         try {
             this.config = loadConfig();
         } catch (Exception e) {
@@ -86,17 +85,15 @@ public class AnalysePlugin {
     }
 
     @Subscribe
-    public boolean onReload(ProxyReloadEvent event) {
-        return reloadConfig();
+    public void onReload(ProxyReloadEvent event) {
+        reloadConfig();
     }
 
-    public boolean reloadConfig() {
+    public void reloadConfig() {
         try {
             config = loadConfig();
-            return true;
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
     }
 

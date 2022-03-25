@@ -15,6 +15,7 @@ repositories {
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.1.0")
     implementation("redis.clients:jedis:4.2.0")
+    implementation("org.slf4j:slf4j-simple:1.7.36")
     annotationProcessor("com.velocitypowered:velocity-api:3.1.0")
 }
 
