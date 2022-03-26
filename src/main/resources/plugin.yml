@@ -1,0 +1,4 @@
+name: Analyse
+version: 1.0.0
+main: net.analyse.plugin.AnalysePlugin
+author: Analyse

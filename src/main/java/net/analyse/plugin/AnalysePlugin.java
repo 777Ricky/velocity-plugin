@@ -1,17 +1,12 @@
 package net.analyse.plugin;
 
-import com.google.inject.Inject;
-import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.connection.DisconnectEvent;
-import com.velocitypowered.api.event.connection.PreLoginEvent;
-import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
-import com.velocitypowered.api.event.proxy.ProxyReloadEvent;
-import com.velocitypowered.api.plugin.Plugin;
-import com.velocitypowered.api.plugin.PluginContainer;
-import com.velocitypowered.api.plugin.PluginDescription;
-import com.velocitypowered.api.plugin.annotation.DataDirectory;
-import com.velocitypowered.api.proxy.Player;
-import com.velocitypowered.api.proxy.ProxyServer;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
+import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.ProxyReloadEvent;
+import net.md_5.bungee.api.plugin.Listener;
+import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.event.EventHandler;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
@@ -23,35 +18,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
-@Plugin(
-        id = "analyse",
-        name = "Analyse",
-        version = "1.0.0",
-        description = "The proxy receiver for Analyse.",
-        url = "https://analyse.net",
-        authors = {"Analyse"}
-)
-public class AnalysePlugin {
-    private ProxyServer proxy;
-    private Logger logger;
-    private Path dataDirectory;
+public class AnalysePlugin extends Plugin implements Listener {
     private Jedis redis;
     private AnalyseConfig config;
 
-    @Inject
-    public AnalysePlugin(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) {
-        this.proxy = proxy;
-        this.logger = logger;
-        this.dataDirectory = dataDirectory;
-    }
-
-    @Subscribe
-    public void onEnable(ProxyInitializeEvent event) {
-        logger.info("Enabling Analyse v" + getDescription().getVersion().orElse("Unknown"));
+    @Override
+    public void onEnable() {
+        this.getLogger().info("Enabling Analyse");
 
         try {
             this.config = loadConfig();
@@ -59,39 +34,39 @@ public class AnalysePlugin {
             throw new RuntimeException("Failed to load config", e);
         }
 
-        loadRedis();
+        this.loadRedis();
+
+        this.getProxy().getPluginManager().registerListener(this, this);
     }
 
-    @Subscribe
+    @EventHandler
     public void onJoin(PreLoginEvent event) {
-        InetSocketAddress virtualDomain = event.getConnection().getVirtualHost().orElse(null);
+        InetSocketAddress virtualDomain = event.getConnection().getVirtualHost();
 
-        if(virtualDomain != null) {
-            this.redis.set("analyse:connected_via:" + event.getUsername(), virtualDomain.getHostName());
+        if (virtualDomain != null) {
+            this.redis.set("analyse:connected_via:" + event.getConnection().getName(), virtualDomain.getHostName());
         }
     }
 
-    @Subscribe
-    public void onLeave(DisconnectEvent event) {
-        Player player = event.getPlayer();
+    @EventHandler
+    public void onLeave(PlayerDisconnectEvent event) {
+        final ProxiedPlayer player = event.getPlayer();
 
-        proxy.getScheduler()
-            .buildTask(this, () -> {
-                if(proxy.getPlayer(player.getUniqueId()).isPresent()) return;
-                this.redis.del("analyse:connected_via:" + player.getUsername());
-            })
-            .delay(10L, TimeUnit.SECONDS)
-            .schedule();
+        this.getProxy().getScheduler()
+                .schedule(this, () -> {
+                    if (getProxy().getPlayer(player.getUniqueId()).isConnected()) return;
+                    this.redis.del("analyse:connected_via:" + player.getName());
+                }, 10L, TimeUnit.SECONDS);
     }
 
-    @Subscribe
+    @EventHandler
     public void onReload(ProxyReloadEvent event) {
         reloadConfig();
     }
 
     public void reloadConfig() {
         try {
-            config = loadConfig();
+            this.config = loadConfig();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -113,10 +88,10 @@ public class AnalysePlugin {
     }
 
     private File getBundledFile(String name) {
-        File file = new File(dataDirectory.toFile(), name);
+        File file = new File(this.getDataFolder(), name);
 
         if (!file.exists()) {
-            dataDirectory.toFile().mkdir();
+            this.getDataFolder().mkdir();
             try (InputStream in = AnalysePlugin.class.getResourceAsStream("/" + name)) {
                 Files.copy(in, file.toPath());
             } catch (IOException e) {
@@ -128,12 +103,8 @@ public class AnalysePlugin {
     }
 
     public Jedis loadRedis() {
-        logger.info("Connecting to Redis under " + this.config.getHost() + ":" + config.getPort() + "..");
-        redis = new Jedis(config.getHost(), config.getPort());
+        this.getLogger().info("Connecting to Redis under " + this.config.getHost() + ":" + config.getPort() + "..");
+        this.redis = new Jedis(config.getHost(), config.getPort());
         return redis;
-    }
-
-    PluginDescription getDescription() {
-        return proxy.getPluginManager().getPlugin("analyse").map(PluginContainer::getDescription).orElse(null);
     }
 }

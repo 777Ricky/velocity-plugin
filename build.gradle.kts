@@ -7,21 +7,21 @@ plugins {
 
 repositories {
     mavenLocal()
-    maven("https://nexus.velocitypowered.com/repository/maven-public/")
+    maven("https://oss.sonatype.org/content/repositories/snapshots")
     maven("https://repo.maven.apache.org/maven2/")
     mavenCentral()
 }
 
 dependencies {
-    compileOnly("com.velocitypowered:velocity-api:3.1.0")
+    compileOnly("net.md-5:bungeecord-api:1.18-R0.1-SNAPSHOT")
+    implementation("ninja.leaping.configurate:configurate-yaml:3.7.1")
     implementation("redis.clients:jedis:4.2.0")
     implementation("org.slf4j:slf4j-simple:1.7.36")
-    annotationProcessor("com.velocitypowered:velocity-api:3.1.0")
 }
 
 group = "net.analyse"
 version = "1.0.0"
-description = "AnalyseVelocity"
+description = "AnalyseBungee"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 val shadowJar: ShadowJar by tasks
