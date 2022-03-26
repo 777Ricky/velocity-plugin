@@ -54,7 +54,7 @@ public class AnalysePlugin extends Plugin implements Listener {
 
         this.getProxy().getScheduler()
                 .schedule(this, () -> {
-                    if (getProxy().getPlayer(player.getUniqueId()).isConnected()) return;
+                    if (player != null && this.getProxy().getPlayer(player.getUniqueId()).isConnected()) return;
                     this.redis.del("analyse:connected_via:" + player.getName());
                 }, 10L, TimeUnit.SECONDS);
     }
