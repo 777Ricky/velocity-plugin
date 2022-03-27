@@ -11,7 +11,7 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
 import ninja.leaping.configurate.yaml.YAMLConfigurationLoader;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPooled;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +21,7 @@ import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 public class AnalysePlugin extends Plugin implements Listener {
-    private Jedis redis;
+    private JedisPooled redis;
     private AnalyseConfig config;
 
     @Override
@@ -51,11 +51,12 @@ public class AnalysePlugin extends Plugin implements Listener {
     @EventHandler
     public void onLeave(PlayerDisconnectEvent event) {
         final ProxiedPlayer player = event.getPlayer();
+        final String name = event.getPlayer().getName();
 
         this.getProxy().getScheduler()
                 .schedule(this, () -> {
-                    if (player != null && this.getProxy().getPlayer(player.getUniqueId()).isConnected()) return;
-                    this.redis.del("analyse:connected_via:" + player.getName());
+                    if (player != null && player.isConnected()) return;
+                    this.redis.del("analyse:connected_via:" + name);
                 }, 10L, TimeUnit.SECONDS);
     }
 
@@ -102,9 +103,9 @@ public class AnalysePlugin extends Plugin implements Listener {
         return file;
     }
 
-    public Jedis loadRedis() {
+    public JedisPooled loadRedis() {
         this.getLogger().info("Connecting to Redis under " + this.config.getHost() + ":" + config.getPort() + "..");
-        this.redis = new Jedis(config.getHost(), config.getPort());
+        this.redis = new JedisPooled(config.getHost(), config.getPort());
         return redis;
     }
 }

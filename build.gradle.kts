@@ -29,6 +29,7 @@ val shadowJar: ShadowJar by tasks
 task<com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation>("relocateShadowJar") {
     target = tasks.shadowJar.get()
     prefix = "net.analyse.plugin.libs"
+    shadowJar.minimize()
 }
 
 tasks.shadowJar.get().dependsOn(tasks.getByName("relocateShadowJar"))
